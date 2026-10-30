@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluetooth Explorer - Cyberpunk Console</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000500">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000500;
+            --terminal-bg: #010a01;
+            --neon-green: #00FF33;
+            --neon-green-dim: rgba(0, 255, 51, 0.2);
+            --neon-green-glow: 0 0 10px #00FF33, 0 0 20px #00FF33;
+            --text-color: #00FF33;
+            --font-stack: 'Share Tech Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-stack);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            border: 2px solid var(--neon-green);
+            box-shadow: inset var(--neon-green-glow);
+        }
+
+        header {
+            text-align: center;
+            padding: 20px;
+            border-bottom: 2px dashed var(--neon-green);
+            text-shadow: var(--neon-green-glow);
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            letter-spacing: 3px;
+        }
+
+        .status-bar {
+            font-size: 0.9rem;
+            color: #ffffff;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-around;
+            border-bottom: 2px solid var(--neon-green);
+            background-color: var(--terminal-bg);
+        }
+
+        .tab-button {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            padding: 15px 10px;
+            font-family: var(--font-stack);
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            outline: none;
+        }
+
+        .tab-button:not(:last-child) {
+            border-right: 1px solid var(--neon-green);
+        }
+
+        .tab-button.active, .tab-button:hover {
+            background-color: var(--neon-green-dim);
+            text-shadow: var(--neon-green-glow);
+            box-shadow: inset 0 0 10px var(--neon-green);
+        }
+
+        main {
+            flex: 1;
+            padding: 20px;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .tab-content {
+            display: none;
+            animation: scanline 0.5s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            text-shadow: var(--neon-green-glow);
+            border-bottom: 1px solid var(--neon-green);
+            padding-bottom: 5px;
+        }
+
+        .console-box {
+            background-color: var(--terminal-bg);
+            border: 1px solid var(--neon-green);
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 51, 0.1);
+            position: relative;
+        }
+
+        .input-group {
+            display: flex; 
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        label {
+            font-size: 1.1rem;
+            text-transform: uppercase;
+        }
+
+        input[type="text"] {
+            background-color: #000;
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            padding: 12px;
+            font-family: var(--font-stack);
+            font-size: 1.1rem;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            box-shadow: var(--neon-green-glow);
+        }
+
+        .cyber-btn {
+            background-color: transparent;
+            color: var(--neon-green);
+            border: 1px solid var(--neon-green);
+            padding: 15px 20px;
+            font-family: var(--font-stack);
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .cyber-btn:hover {
+            background-color: var(--neon-green);
+            color: #000;
+            box-shadow: var(--neon-green-glow);
+        }
+
+        .cyber-btn:active {
+            transform: scale(0.98);
+        }
+
+        .terminal-log {
+            background-color: #000;
+            border: 1px solid var(--neon-green);
+            height: 150px;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: var(--font-stack);
+            font-size: 0.95rem;
+            color: #00FF33;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            line-height: 1.3;
+        }
+
+        .log-entry::before {
+            content: "> ";
+            color: #fff;
+        }
+
+        /* File List styling */
+        .file-list {
+            list-style: none;
+            margin-top: 15px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px dashed var(--neon-green-dim);
+            margin-bottom: 8px;
+            background-color: rgba(0, 5, 0, 0.6);
+        }
+
+        .file-item:hover {
+            border-color: var(--neon-green);
+            background-color: var(--neon-green-dim);
+        }
+
+        .file-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-name {
+            font-weight: bold;
+        }
+
+        .file-meta {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .dl-btn {
+            background: none;
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            padding: 5px 10px;
+            cursor: pointer;
+            font-family: var(--font-stack);
+            font-size: 0.85rem;
+        }
+
+        .dl-btn:hover {
+            background-color: var(--neon-green);
+            color: #000;
+        }
+
+        /* Sonar Radar view */
+        .radar-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .radar {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: 2px solid var(--neon-green);
+            position: relative;
+            margin-bottom: 20px;
+            background: radial-gradient(circle, rgba(0,255,51,0.05) 0%, rgba(0,5,0,1) 80%);
+            box-shadow: 0 0 15px rgba(0, 255, 51, 0.2);
+            overflow: hidden;
+        }
+
+        .radar::before {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent 49%, var(--neon-green-dim) 50%, transparent 51%);
+        }
+
+        .radar::after {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(0deg, transparent 49%, var(--neon-green-dim) 50%, transparent 51%);
+        }
+
+        .radar-sweep {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: conic-gradient(from 0deg, rgba(0, 255, 51, 0.3) 0deg, transparent 90deg);
+            border-radius: 50%;
+            transform-origin: center;
+            animation: sweep 4s linear infinite;
+            animation-play-state: paused;
+        }
+
+        .radar.active .radar-sweep {
+            animation-play-state: running;
+        }
+
+        @keyframes sweep {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .sonar-stats {
+            text-align: center;
+            width: 100%;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            color: #fff;
+            text-shadow: var(--neon-green-glow);
+            margin: 10px 0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 15px;
+            border: 1px solid var(--neon-green);
+            background-color: var(--neon-green-dim);
+            font-weight: bold;
+            border-radius: 3px;
+            letter-spacing: 1.5px;
+        }
+
+        /* Footer / decorative */
+        footer {
+            text-align: center;
+            padding: 15px;
+            font-size: 0.8rem;
+            border-top: 1px dashed var(--neon-green);
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>BLUETOOTH_EXPLORER_V1.0</h1>
+        <div class="status-bar">SECURE PROTOCOL // ONLINE // LATENCY: 2ms</div>
+    </header>
+
+    <nav>
+        <button class="tab-button active" onclick="openTab(event, 'config')">Configurações</button>
+        <button class="tab-button" onclick="openTab(event, 'explorer')">Ficheiros</button>
+        <button class="tab-button" onclick="openTab(event, 'sonar')">Sonar RSSI</button>
+    </nav>
+
+    <main>
+        <!-- SEÇÃO 1: CONFIGURAÇÃO DO APARELHO -->
+        <div id="config" class="tab-content active">
+            <h2>CONFIGURAÇÃO DO APARELHO</h2>
+            <div class="console-box">
+                <div class="input-group">
+                    <label for="device-name">Nome do Dispositivo Bluetooth</label>
+                    <input type="text" id="device-name" value="BluetoothExplorer_Device" placeholder="Insira o novo nome...">
+                </div>
+                <button class="cyber-btn" onclick="updateDeviceName()">Atualizar Nome Bluetooth</button>
+                <div class="terminal-log" id="config-terminal">
+                    <div class="log-entry">Consola inicializada com sucesso.</div>
+                    <div class="log-entry">Bluetooth Explorer pronto para conexão.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEÇÃO 2: EXPLORADOR DE FICHEIROS -->
+        <div id="explorer" class="tab-content">
+            <h2>EXPLORADOR DE FICHEIROS REMOTO</h2>
+            <div class="console-box">
+                <button class="cyber-btn" onclick="scanFiles()">Procurar Ficheiros no Aparelho Secundário</button>
+                <div class="terminal-log" id="explorer-terminal" style="height: 80px; margin-bottom: 15px;">
+                    <div class="log-entry">Terminal aguardando sinal do explorador...</div>
+                </div>
+                <ul class="file-list" id="file-list-container"></ul>
+            </div>
+        </div>
+
+        <!-- SEÇÃO 3: MODO SONAR -->
+        <div id="sonar" class="tab-content">
+            <h2>MODO SONAR (RSSI RADAR)</h2>
+            <div class="console-box">
+                <div class="radar-container">
+                    <div class="radar" id="radar-widget">
+                        <div class="radar-sweep"></div>
+                    </div>
+                    <button class="cyber-btn" id="sonar-btn" onclick="toggleSonar()">ATIVAR MODO SONAR (MEDIR DISTÂNCIA)</button>
+                    <div class="sonar-stats" id="sonar-stats" style="display: none; margin-top: 20px;">
+                        <div>Sinal de Rede Bluetooth (RSSI):</div>
+                        <div class="metric-value" id="rssi-value">-55 dBm</div>
+                        <div>Distância Estimada:</div>
+                        <div class="metric-value" id="distance-value" style="color: #fff;">3.16m</div>
+                        <div style="margin-top: 10px;">STATUS DE PROXIMIDADE:</div>
+                        <div class="status-badge" id="proximity-status">PRÓXIMO 📶</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        CYBER_NETWORKS INC. // TODOS OS DIREITOS RESERVADOS &copy; 2026
+    </footer>
+
+    <script>
+        // Lógica de Troca de Abas
+        function openTab(evt, tabId) {
+            const tabContents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove("active");
+            }
+            const tabButtons = document.getElementsByClassName("tab-button");
+            for (let i = 0; i < tabButtons.length; i++) {
+                tabButtons[i].classList.remove("active");
+            }
+            document.getElementById(tabId).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+
+        // Lógica de Configuração do Nome
+        function updateDeviceName() {
+            const nameInput = document.getElementById("device-name").value.trim();
+            const terminal = document.getElementById("config-terminal");
+            const timestamp = new Date().toLocaleTimeString();
+
+            if (nameInput === "") {
+                terminal.innerHTML += `<div class="log-entry" style="color: #ff3333;">[${timestamp}] ERRO: Nome não pode ser vazio!</div>`;
+            } else {
+                terminal.innerHTML += `<div class="log-entry">[${timestamp}] Comando enviado: AT+BT_NAME="${nameInput}"</div>`;
+                terminal.innerHTML += `<div class="log-entry" style="color: #00FF33;">[${timestamp}] SUCESSO: Nome Bluetooth atualizado para "${nameInput}"</div>`;
+            }
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Lógica do Explorador de Ficheiros
+        const simulatedFiles = [
+            { name: "/DCIM/Camera/IMG_20260401_001.jpg", size: "2.4 MB" },
+            { name: "/DCIM/Camera/VID_20260401_002.mp4", size: "45.1 MB" },
+            { name: "/DCIM/Screenshots/SCR_HackerTerminal.png", size: "512 KB" },
+            { name: "/Downloads/encrypter_payload.sh", size: "12 KB" },
+            { name: "/DCIM/Camera/IMG_20260402_105.jpg", size: "3.1 MB" }
+        ];
+
+        function scanFiles() {
+            const terminal = document.getElementById("explorer-terminal");
+            const fileList = document.getElementById("file-list-container");
+            const timestamp = new Date().toLocaleTimeString();
+
+            terminal.innerHTML += `<div class="log-entry">[${timestamp}] Iniciando varredura via RFCOMM canal 4...</div>`;
+            fileList.innerHTML = "";
+
+            setTimeout(() => {
+                terminal.innerHTML += `<div class="log-entry" style="color: #00FF33;">[${timestamp}] Conectado ao aparelho remoto. Listando ficheiros...</div>`;
+
+                simulatedFiles.forEach((file, index) => {
+                    setTimeout(() => {
+                        const li = document.createElement("li");
+                        li.className = "file-item";
+                        li.innerHTML = `
+                            <div class="file-info">
+                                <span class="file-name">${file.name}</span>
+                                <span class="file-meta">Tamanho: ${file.size}</span>
+                            </div>
+                            <button class="dl-btn" onclick="downloadFile('${file.name}')">Transferir</button>
+                        `;
+                        fileList.appendChild(li);
+                    }, index * 200);
+                });
+                terminal.scrollTop = terminal.scrollHeight;
+            }, 1000);
+        }
+
+        function downloadFile(name) {
+            alert(`[SIMULAÇÃO P2P] A descarregar/transferir: ${name}`);
+        }
+
+        // Lógica do Sonar (Radar RSSI)
+        let sonarInterval = null;
+
+        function toggleSonar() {
+            const btn = document.getElementById("sonar-btn");
+            const stats = document.getElementById("sonar-stats");
+            const radar = document.getElementById("radar-widget");
+
+            if (sonarInterval) {
+                // Desativar
+                clearInterval(sonarInterval);
+                sonarInterval = null;
+                btn.textContent = "ATIVAR MODO SONAR (MEDIR DISTÂNCIA)";
+                stats.style.display = "none";
+                radar.classList.remove("active");
+            } else {
+                // Ativar
+                btn.textContent = "DESATIVAR SONAR";
+                stats.style.display = "block";
+                radar.classList.add("active");
+                updateSonarStats();
+                sonarInterval = setInterval(updateSonarStats, 1500);
+            }
+        }
+
+        function updateSonarStats() {
+            // Gera um valor de RSSI realista entre -45 dBm (perto) e -85 dBm (longe)
+            const rssi = Math.floor(Math.random() * (-45 - (-85) + 1)) + (-85);
+
+            // Calcula a distância usando a fórmula de Path Loss Log-Distância
+            // d = 10 ^ ((Measured Power - RSSI) / (10 * N))
+            // Onde Measured Power (txPower) ~ -50 dBm a 1 metro, e N (constante de propagação) ~ 2.5
+            const txPower = -50;
+            const N = 2.5;
+            const exponent = (txPower - rssi) / (10 * N);
+            let distance = Math.pow(10, exponent);
+            distance = distance.toFixed(2);
+
+            document.getElementById("rssi-value").textContent = `${rssi} dBm`;
+            document.getElementById("distance-value").textContent = `${distance}m`;
+
+            // Determina o status visual
+            const badge = document.getElementById("proximity-status");
+            if (rssi >= -55) {
+                badge.textContent = "MUITO PERTO 🎯";
+                badge.style.borderColor = "#00FF33";
+                badge.style.color = "#00FF33";
+            } else if (rssi >= -72) {
+                badge.textContent = "PRÓXIMO 📶";
+                badge.style.borderColor = "#ffff33";
+                badge.style.color = "#ffff33";
+            } else {
+                badge.textContent = "LONGE 📡";
+                badge.style.borderColor = "#ff3333";
+                badge.style.color = "#ff3333";
+            }
+        }
+    </script>
+</body>
+</html>
